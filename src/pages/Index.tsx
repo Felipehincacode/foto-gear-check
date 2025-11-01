@@ -1,63 +1,14 @@
-import { useState, useEffect } from "react";
-import { Equipment, FilterType } from "@/types/equipment";
+import { useState } from "react";
+import { FilterType } from "@/types/equipment";
 import { EquipmentCard } from "@/components/EquipmentCard";
 import { AddEquipmentDialog } from "@/components/AddEquipmentDialog";
 import { StatusFilter } from "@/components/StatusFilter";
 import { Camera, Package } from "lucide-react";
-import { toast } from "sonner";
-
-const STORAGE_KEY = "photo-equipment-inventory";
+import { useEquipment } from "@/hooks/useEquipment";
 
 const Index = () => {
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setEquipment(JSON.parse(stored));
-      } catch (error) {
-        console.error("Error loading equipment:", error);
-      }
-    }
-  }, []);
-
-  // Save to localStorage whenever equipment changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(equipment));
-  }, [equipment]);
-
-  const handleAddEquipment = (name: string, description: string, imageUrl: string) => {
-    const newEquipment: Equipment = {
-      id: crypto.randomUUID(),
-      name,
-      description,
-      imageUrl,
-      isPacked: false,
-      createdAt: Date.now(),
-    };
-    setEquipment([newEquipment, ...equipment]);
-  };
-
-  const handleTogglePacked = (id: string) => {
-    setEquipment(equipment.map(item => 
-      item.id === id ? { ...item, isPacked: !item.isPacked } : item
-    ));
-    const item = equipment.find(e => e.id === id);
-    if (item) {
-      toast.success(item.isPacked ? `${item.name} desempaquetado` : `${item.name} empaquetado`);
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    const item = equipment.find(e => e.id === id);
-    setEquipment(equipment.filter(e => e.id !== id));
-    if (item) {
-      toast.success(`${item.name} eliminado`);
-    }
-  };
+  const { equipment, loading, addEquipment, togglePacked, deleteEquipment } = useEquipment();
 
   const filteredEquipment = equipment.filter(item => {
     if (filter === 'packed') return item.isPacked;
@@ -75,6 +26,19 @@ const Index = () => {
     ? Math.round((counts.packed / counts.all) * 100) 
     : 0;
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-4 animate-pulse">
+            <Camera className="h-8 w-8 text-accent" />
+          </div>
+          <p className="text-muted-foreground">Cargando equipo...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -90,7 +54,7 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Gestiona tu inventario</p>
               </div>
             </div>
-            <AddEquipmentDialog onAdd={handleAddEquipment} />
+            <AddEquipmentDialog onAdd={addEquipment} />
           </div>
         </div>
       </header>
@@ -133,8 +97,8 @@ const Index = () => {
                   <EquipmentCard
                     key={item.id}
                     equipment={item}
-                    onTogglePacked={handleTogglePacked}
-                    onDelete={handleDelete}
+                    onTogglePacked={togglePacked}
+                    onDelete={deleteEquipment}
                   />
                 ))}
               </div>
@@ -159,7 +123,7 @@ const Index = () => {
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
               Agrega tu equipo fotográfico para llevar un control de lo que empaquetas antes y después de cada sesión
             </p>
-            <AddEquipmentDialog onAdd={handleAddEquipment} />
+            <AddEquipmentDialog onAdd={addEquipment} />
           </div>
         )}
       </main>

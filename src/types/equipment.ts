@@ -4,6 +4,7 @@ export interface Equipment {
   description?: string;
   imageUrl: string;
   isPacked: boolean;
+  category?: string;
   createdAt: number;
 }
 

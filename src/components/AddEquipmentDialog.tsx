@@ -4,19 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddEquipmentDialogProps {
-  onAdd: (name: string, description: string, imageUrl: string) => void;
+  onAdd: (name: string, description: string, imageUrl: string, category?: string) => void;
 }
 
 export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [category, setCategory] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,17 +29,16 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
         return;
       }
       
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const result = reader.result as string;
-        setImageUrl(result);
-        setImagePreview(result);
+        setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -44,21 +46,50 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
       return;
     }
     
-    if (!imageUrl) {
+    if (!imageFile) {
       toast.error("La imagen es obligatoria");
       return;
     }
 
-    onAdd(name.trim(), description.trim(), imageUrl);
-    
-    // Reset form
-    setName("");
-    setDescription("");
-    setImageUrl("");
-    setImagePreview(null);
-    setOpen(false);
-    
-    toast.success("Equipo agregado correctamente");
+    setUploading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Debes iniciar sesión para agregar equipo");
+        return;
+      }
+
+      // Upload image to Supabase Storage
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('equipment-images')
+        .upload(fileName, imageFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('equipment-images')
+        .getPublicUrl(fileName);
+
+      await onAdd(name.trim(), description.trim(), publicUrl, category.trim() || undefined);
+      
+      // Reset form
+      setName("");
+      setDescription("");
+      setCategory("");
+      setImageFile(null);
+      setImagePreview(null);
+      setOpen(false);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Error al subir la imagen");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -97,6 +128,17 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
               onChange={(e) => setDescription(e.target.value)}
               maxLength={300}
               rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoría (opcional)</Label>
+            <Input
+              id="category"
+              placeholder="ej. Cámaras, Lentes, Iluminación"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              maxLength={50}
             />
           </div>
           
@@ -143,8 +185,16 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
             <Button 
               type="submit"
               className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground"
+              disabled={uploading}
             >
-              Agregar
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                "Agregar"
+              )}
             </Button>
           </div>
         </form>
