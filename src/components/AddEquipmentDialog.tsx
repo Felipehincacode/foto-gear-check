@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AddEquipmentDialogProps {
   onAdd: (name: string, description: string, imageUrl: string, category?: string) => void;
@@ -40,12 +39,12 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       toast.error("El nombre es obligatorio");
       return;
     }
-    
+
     if (!imageFile) {
       toast.error("La imagen es obligatoria");
       return;
@@ -54,29 +53,18 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
     setUploading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Debes iniciar sesión para agregar equipo");
-        return;
-      }
+      // Convert image to base64 for local storage
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
 
-      // Upload image to Supabase Storage
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('equipment-images')
-        .upload(fileName, imageFile);
+      const imageUrl = await base64Promise;
 
-      if (uploadError) throw uploadError;
+      await onAdd(name.trim(), description.trim(), imageUrl, category.trim() || undefined);
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('equipment-images')
-        .getPublicUrl(fileName);
-
-      await onAdd(name.trim(), description.trim(), publicUrl, category.trim() || undefined);
-      
       // Reset form
       setName("");
       setDescription("");
@@ -85,8 +73,8 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
       setImagePreview(null);
       setOpen(false);
     } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Error al subir la imagen");
+      console.error("Error processing image:", error);
+      toast.error("Error al procesar la imagen");
     } finally {
       setUploading(false);
     }

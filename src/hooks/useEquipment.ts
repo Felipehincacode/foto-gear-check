@@ -1,42 +1,42 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Equipment } from "@/types/equipment";
 import { toast } from "sonner";
+
+const STORAGE_KEY = "foto-gear-equipment";
 
 export const useEquipment = () => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchEquipment = async () => {
+  // Load equipment from localStorage
+  const loadEquipment = () => {
     try {
-      const { data, error } = await supabase
-        .from("equipment")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const mappedEquipment: Equipment[] = (data || []).map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description || undefined,
-        imageUrl: item.image_url,
-        isPacked: item.is_packed,
-        category: item.category || undefined,
-        createdAt: new Date(item.created_at).getTime(),
-      }));
-
-      setEquipment(mappedEquipment);
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsedEquipment = JSON.parse(stored);
+        setEquipment(parsedEquipment);
+      }
     } catch (error) {
-      console.error("Error fetching equipment:", error);
+      console.error("Error loading equipment:", error);
       toast.error("Error al cargar el equipo");
     } finally {
       setLoading(false);
     }
   };
 
+  // Save equipment to localStorage
+  const saveEquipment = (newEquipment: Equipment[]) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newEquipment));
+      setEquipment(newEquipment);
+    } catch (error) {
+      console.error("Error saving equipment:", error);
+      toast.error("Error al guardar el equipo");
+    }
+  };
+
   useEffect(() => {
-    fetchEquipment();
+    loadEquipment();
   }, []);
 
   const addEquipment = async (
@@ -46,24 +46,18 @@ export const useEquipment = () => {
     category?: string
   ) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Debes iniciar sesión para agregar equipo");
-        return;
-      }
-
-      const { error } = await supabase.from("equipment").insert({
-        user_id: user.id,
+      const newEquipment: Equipment = {
+        id: crypto.randomUUID(),
         name,
-        description: description || null,
-        image_url: imageUrl,
-        is_packed: false,
-        category: category || null,
-      });
+        description: description || undefined,
+        imageUrl,
+        isPacked: false,
+        category: category || undefined,
+        createdAt: Date.now(),
+      };
 
-      if (error) throw error;
-
-      await fetchEquipment();
+      const updatedEquipment = [...equipment, newEquipment];
+      saveEquipment(updatedEquipment);
       toast.success("Equipo agregado correctamente");
     } catch (error) {
       console.error("Error adding equipment:", error);
@@ -76,18 +70,11 @@ export const useEquipment = () => {
       const item = equipment.find((e) => e.id === id);
       if (!item) return;
 
-      const { error } = await supabase
-        .from("equipment")
-        .update({ is_packed: !item.isPacked })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setEquipment(
-        equipment.map((e) =>
-          e.id === id ? { ...e, isPacked: !e.isPacked } : e
-        )
+      const updatedEquipment = equipment.map((e) =>
+        e.id === id ? { ...e, isPacked: !e.isPacked } : e
       );
+
+      saveEquipment(updatedEquipment);
 
       toast.success(
         item.isPacked ? `${item.name} desempaquetado` : `${item.name} empaquetado`
@@ -101,16 +88,10 @@ export const useEquipment = () => {
   const deleteEquipment = async (id: string) => {
     try {
       const item = equipment.find((e) => e.id === id);
-      
-      const { error } = await supabase
-        .from("equipment")
-        .delete()
-        .eq("id", id);
 
-      if (error) throw error;
+      const updatedEquipment = equipment.filter((e) => e.id !== id);
+      saveEquipment(updatedEquipment);
 
-      setEquipment(equipment.filter((e) => e.id !== id));
-      
       if (item) {
         toast.success(`${item.name} eliminado`);
       }
@@ -126,6 +107,6 @@ export const useEquipment = () => {
     addEquipment,
     togglePacked,
     deleteEquipment,
-    refreshEquipment: fetchEquipment,
+    refreshEquipment: loadEquipment,
   };
 };

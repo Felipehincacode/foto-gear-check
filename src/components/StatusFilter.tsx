@@ -16,8 +16,8 @@ interface StatusFilterProps {
 export const StatusFilter = ({ currentFilter, onFilterChange, counts }: StatusFilterProps) => {
   const filters: { type: FilterType; label: string; shortLabel: string; icon: React.ReactNode; count: number }[] = [
     { type: 'all', label: 'Todos', shortLabel: 'Todos', icon: <List className="h-3 w-3 md:h-4 md:w-4" />, count: counts.all },
-    { type: 'packed', label: 'Empaquetados', shortLabel: 'Listos', icon: <Check className="h-3 w-3 md:h-4 md:w-4" />, count: counts.packed },
-    { type: 'unpacked', label: 'Pendientes', shortLabel: 'Falta', icon: <X className="h-3 w-3 md:h-4 md:w-4" />, count: counts.unpacked },
+    { type: 'packed', label: 'En el bolso', shortLabel: 'Bolso', icon: <Check className="h-3 w-3 md:h-4 md:w-4" />, count: counts.packed },
+    { type: 'unpacked', label: 'En uso', shortLabel: 'Uso', icon: <X className="h-3 w-3 md:h-4 md:w-4" />, count: counts.unpacked },
   ];
 
   return (
