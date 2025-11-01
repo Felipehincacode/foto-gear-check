@@ -14,28 +14,30 @@ interface StatusFilterProps {
 }
 
 export const StatusFilter = ({ currentFilter, onFilterChange, counts }: StatusFilterProps) => {
-  const filters: { type: FilterType; label: string; icon: React.ReactNode; count: number }[] = [
-    { type: 'all', label: 'Todos', icon: <List className="h-4 w-4" />, count: counts.all },
-    { type: 'packed', label: 'Empaquetados', icon: <Check className="h-4 w-4" />, count: counts.packed },
-    { type: 'unpacked', label: 'Pendientes', icon: <X className="h-4 w-4" />, count: counts.unpacked },
+  const filters: { type: FilterType; label: string; shortLabel: string; icon: React.ReactNode; count: number }[] = [
+    { type: 'all', label: 'Todos', shortLabel: 'Todos', icon: <List className="h-3 w-3 md:h-4 md:w-4" />, count: counts.all },
+    { type: 'packed', label: 'Empaquetados', shortLabel: 'Listos', icon: <Check className="h-3 w-3 md:h-4 md:w-4" />, count: counts.packed },
+    { type: 'unpacked', label: 'Pendientes', shortLabel: 'Falta', icon: <X className="h-3 w-3 md:h-4 md:w-4" />, count: counts.unpacked },
   ];
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {filters.map(({ type, label, icon, count }) => (
+    <div className="flex flex-wrap gap-1.5 md:gap-2">
+      {filters.map(({ type, label, shortLabel, icon, count }) => (
         <Button
           key={type}
+          size="sm"
           variant={currentFilter === type ? "default" : "outline"}
           onClick={() => onFilterChange(type)}
           className={cn(
-            "transition-all duration-200",
+            "transition-all duration-200 text-xs md:text-sm h-8 md:h-10 px-2 md:px-4",
             currentFilter === type && "bg-accent hover:bg-accent/90 text-accent-foreground"
           )}
         >
           {icon}
-          <span className="ml-2">{label}</span>
+          <span className="ml-1 md:ml-2 hidden sm:inline">{label}</span>
+          <span className="ml-1 md:ml-2 sm:hidden">{shortLabel}</span>
           <span className={cn(
-            "ml-2 px-2 py-0.5 rounded-full text-xs font-semibold",
+            "ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 rounded-full text-xs font-semibold",
             currentFilter === type 
               ? "bg-accent-foreground/20" 
               : "bg-muted"

@@ -95,9 +95,10 @@ export const AddEquipmentDialog = ({ onAdd }: AddEquipmentDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="shadow-lg bg-accent hover:bg-accent/90 text-accent-foreground">
-          <Plus className="mr-2 h-5 w-5" />
-          Agregar Equipo
+        <Button size="sm" className="shadow-lg bg-accent hover:bg-accent/90 text-accent-foreground text-xs md:text-sm h-8 md:h-10 px-2 md:px-4">
+          <Plus className="h-4 w-4 md:mr-2 md:h-5 md:w-5" />
+          <span className="hidden md:inline">Agregar Equipo</span>
+          <span className="md:hidden ml-1">Agregar</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
